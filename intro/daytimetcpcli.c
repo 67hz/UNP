@@ -1,3 +1,5 @@
+/* simple tcp client */
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -9,6 +11,7 @@
 #include <sys/stat.h>
 #include <limits.h>
 #include <stdlib.h>
+#include "unp.h"
 
 #define SA                   const struct sockaddr
 
@@ -48,8 +51,8 @@ int main(int argc, char *argv[])
     }
         
 
-    while ( (n = read(sockfd, recvline, LINE_MAX)) > 0) {
-        recvline[n] = 0;         /* nul terminate */
+    while ( (n = readline(sockfd, recvline, LINE_MAX)) > 0) {
+        recvline[n] = 0;         /* null terminate */
         if (fputs(recvline, stdout) == EOF)
             exit(EXIT_FAILURE);
         counter++;
