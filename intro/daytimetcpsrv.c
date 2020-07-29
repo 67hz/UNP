@@ -10,22 +10,15 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include "unp.h"
 
-int Socket(int family, int type, int protocol)
-{
-    int n;
-    if ( (n = socket(family, type, protocol)) <  1) {
-        perror("socket error");
-        return -1;
-    }
-    return n;
-}
 
 int main(int argc, char *argv[])
 {
 
     int listenfd, connfd;
-    struct sockaddr_in servaddr;
+    socklen_t len;
+    struct sockaddr_in servaddr, cliaddr;
     char buf[LINE_MAX];
     time_t ticks;
     ssize_t ret;
@@ -49,14 +42,18 @@ int main(int argc, char *argv[])
     listen(listenfd, 20);
 
     for (;;) {
-        connfd = accept(listenfd, (struct sockaddr *) NULL, NULL);
-        printf("New connection\n");
+        len = sizeof(cliaddr);
+        connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &len);
+        printf("Connection from %s, port %d\n",
+                inet_ntop(AF_INET, &cliaddr.sin_addr, buf, sizeof(buf)),
+                ntohs(cliaddr.sin_port));
+
+        printf("Family: %d\n", Sockfd_to_family(listenfd));
 
         ticks = time(NULL);
         
         snprintf(buf, sizeof(buf), "%.24s\r\n", ctime(&ticks));
 
-        /* while (len != 0 && (ret = write(connfd, &buf[count], 1)) != 0) { */
         for (int i = 0; i < strlen(buf); i++) {
 
             ret = write(connfd, &buf[i], 1);

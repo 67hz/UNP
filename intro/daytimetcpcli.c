@@ -22,6 +22,8 @@ int main(int argc, char *argv[])
     int sockfd, n;
     int counter = 0;
     char recvline[LINE_MAX + 1];
+    socklen_t cli_len;
+    struct sockaddr cliaddr;
     struct sockaddr_in servaddr;
 
     if (argc != 2) {
@@ -49,6 +51,15 @@ int main(int argc, char *argv[])
         perror("connect error");
         exit(EXIT_FAILURE);
     }
+
+
+    /* @TODO implement sock_ntop */
+    char str[INET_ADDRSTRLEN];
+    (void) getsockname(sockfd, &cliaddr, &cli_len);
+    printf("getsockname: %d\n", cliaddr.sa_family);
+
+    inet_ntop(AF_INET, &cliaddr, str, sizeof(str));
+    printf("inet_ntop %s \n", str);
         
 
     while ( (n = readline(sockfd, recvline, LINE_MAX)) > 0) {
