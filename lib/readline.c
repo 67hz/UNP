@@ -8,6 +8,9 @@ static int read_cnt; /* static int inits to 0 */
 static char *read_ptr;
 static char read_buf[LINE_MAX];
 
+/**
+ * Not re-entrant or MT-safe due to statics
+ */
 static size_t
 my_read(int fd, char *ptr)
 {

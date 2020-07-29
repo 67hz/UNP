@@ -52,10 +52,10 @@ int main(int argc, char *argv[])
         
 
     while ( (n = readline(sockfd, recvline, LINE_MAX)) > 0) {
+        counter++;
         recvline[n] = 0;         /* null terminate */
         if (fputs(recvline, stdout) == EOF)
             exit(EXIT_FAILURE);
-        counter++;
     }
 
     if (n < 0) {
