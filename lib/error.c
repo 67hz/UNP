@@ -13,7 +13,21 @@ void err_doit(int loglevel, const char *fmt, va_list ap)
 }
 
 /*
- * fatal error - system call failed, ok to terminate here
+ * non-fatal error related to system call
+ * print and return
+ */
+
+void err_ret(const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    err_doit(LOG_INFO, fmt, ap);
+    return;
+}
+
+/*
+ * fatal error - system call failed
+ * print message and terminate
  * do not terminate from outside main otherwise
  */
 void err_sys(const char *fmt, ...)
@@ -24,6 +38,8 @@ void err_sys(const char *fmt, ...)
     va_end(ap);
     exit(EXIT_FAILURE);
 }
+
+
 
 
 

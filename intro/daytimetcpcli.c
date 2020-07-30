@@ -16,12 +16,11 @@
 #define SA                   const struct sockaddr
 
 
-
 int main(int argc, char *argv[])
 {
     int sockfd, n;
-    int counter = 0;
     char recvline[LINE_MAX + 1];
+    char sendline[LINE_MAX + 1];
     socklen_t cli_len;
     struct sockaddr cliaddr;
     struct sockaddr_in servaddr;
@@ -60,22 +59,17 @@ int main(int argc, char *argv[])
 
     inet_ntop(AF_INET, &cliaddr, str, sizeof(str));
     printf("inet_ntop %s \n", str);
-        
 
-    while ( (n = readline(sockfd, recvline, LINE_MAX)) > 0) {
-        counter++;
-        recvline[n] = 0;         /* null terminate */
-        if (fputs(recvline, stdout) == EOF)
-            exit(EXIT_FAILURE);
+    /* write STDIN to server */
+    while (fgets(sendline, LINE_MAX, stdin) != NULL) {
+        Writen(sockfd, sendline, strlen(sendline));
+
+        /* read back, readline null terminates */
+        if (readline(sockfd, recvline, LINE_MAX) == 0)
+            err_sys("readline error");
+
+        fputs(recvline, stdout);
     }
-
-    if (n < 0) {
-        perror("Read error");
-        exit(EXIT_FAILURE);
-    }
-        
-    printf("Counter: %d\n", counter);
-
 
     exit(EXIT_SUCCESS);
 }
