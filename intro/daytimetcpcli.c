@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     memset(&servaddr, 0, sizeof(servaddr));
 
     servaddr.sin_family = AF_INET;  /* TCP */
-    servaddr.sin_port = htons(9999);      /* daytime server */
+    servaddr.sin_port = htons(SERV_PORT);      /* daytime server */
 
     /* presentation to network */
     if (inet_pton(AF_INET, argv[1], &servaddr.sin_addr) == 0) {

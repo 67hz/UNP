@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     memset (&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);   /* host to network long */
-    servaddr.sin_port = htons(9999);  /* host to network short - dayime server */
+    servaddr.sin_port = htons(SERV_PORT);  /* host to network short - dayime server */
 
     if (bind (listenfd,
                 (const struct sockaddr *) &servaddr, sizeof(servaddr)) == -1) {
