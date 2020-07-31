@@ -66,6 +66,7 @@ int main(int argc, char *argv[])
             snprintf(buf, sizeof(buf), "%.24s\r\n", ctime(&ticks));
 
             for (;;) {
+                /* blocking until line sent from client*/
                 if ( (nread = readline(connfd, chat_buf, LINE_MAX)) == 0) { /* conn closed by other end */
                     printf("%d has left @ %s\n", client_port, buf);
                     break;

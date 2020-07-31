@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     inet_ntop(AF_INET, &cliaddr, str, sizeof(str));
     printf("inet_ntop %s \n", str);
 
-    /* write STDIN to server */
+    /* write STDIN to server, block*/
     while (fgets(sendline, LINE_MAX, stdin) != NULL) {
         Writen(sockfd, sendline, strlen(sendline));
 
