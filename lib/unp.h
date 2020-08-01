@@ -1,13 +1,22 @@
 #ifndef _UNP_H
 #define _UNP_H 1
 #include <unistd.h>
-#include <errno.h>
-#include <stdio.h>
-#include <limits.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <stdarg.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <time.h>
+#include <limits.h>
+#include <sys/socket.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <errno.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <wait.h>
+#include <sys/stat.h>
+#include <stdarg.h>
 
 
 #define SERV_PORT           9877
@@ -16,6 +25,7 @@
 /* Error Handling */
 void err_msg(const char *fmt, ...);
 void err_sys(const char *fmt, ...);
+void err_ret(const char *fmt, ...);
 
 /* IO */
 ssize_t

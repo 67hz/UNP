@@ -1,16 +1,16 @@
-#include <unistd.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <time.h>
-#include <limits.h>
-#include <sys/socket.h>
-#include <string.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
+/* IPv4 server */
 #include "unp.h"
+
+void
+sig_child(int signo)
+{
+    pid_t pid;
+    int stat;
+
+    pid = wait(&stat);
+    printf("Child %d terminated with [%s]\n", pid, sys_siglist[signo]);   /* unsafe to print */
+    return;
+}
 
 
 int main(int argc, char *argv[])
@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     socklen_t clilen;
     ssize_t nread;
     struct sockaddr_in servaddr, cliaddr;
-
+    struct sigaction sa;
     char buf[LINE_MAX];
     char chat_buf[LINE_MAX];
 
@@ -45,13 +45,31 @@ int main(int argc, char *argv[])
     /* backlog set to 20 */
     listen(listenfd, 20);
 
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sa.sa_flags |= SA_RESTART;
+    sa.sa_handler = sig_child;
+
+#if 0
+    /* catch SIGCHILD (child terminated) to avoid zombie children */
+    /* old, obsoleted, undefined way */
+    if (signal(SIGCHLD, sig_child) == SIG_ERR)
+        err_sys("signal error");
+#endif
+
+    if (sigaction(SIGCHLD, &sa, NULL) == -1)
+        err_sys("signal error");
+
     for (;;) {
         clilen = sizeof(cliaddr);
-        if ( (connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen)) == -1)
-            err_sys("accept error");
+
+        if ( (connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen)) < 0)
+            err_ret("accept error");
+
         int client_port = ntohs(cliaddr.sin_port);
 
-        if ( (childpid = fork()) == 0) {                /* child */
+/* CHILD */
+        if ( (childpid = fork()) == 0) {
             if (close(listenfd) == -1)        /* close listener in child */
                 err_sys("child close error");
 
@@ -59,8 +77,6 @@ int main(int argc, char *argv[])
             printf("%s, port %d has entered the room\n",
                     inet_ntop(AF_INET, &cliaddr.sin_addr, buf, sizeof(buf)),
                     client_port);
-
-
 
             ticks = time(NULL);
             snprintf(buf, sizeof(buf), "%.24s\r\n", ctime(&ticks));
@@ -79,6 +95,8 @@ int main(int argc, char *argv[])
 
             exit(EXIT_SUCCESS);         /* exit child process */
         }
+/* end CHILD */
+
 
         if (close(connfd) == -1) {      /* parent closes conn */
             perror("close connfd");
