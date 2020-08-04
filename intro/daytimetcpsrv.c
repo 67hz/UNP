@@ -7,8 +7,8 @@ sig_child(int signo)
     pid_t pid;
     int stat;
 
-    pid = wait(&stat);
-    printf("Child %d terminated with [%s]\n", pid, sys_siglist[signo]);   /* unsafe to print */
+    while ( (pid = waitpid(-1, &stat, WNOHANG)) > 0)
+        printf("%d terminated with [%s]\n", pid, sys_siglist[signo]);   /* unsafe to print */
     return;
 }
 
@@ -63,8 +63,11 @@ int main(int argc, char *argv[])
     for (;;) {
         clilen = sizeof(cliaddr);
 
-        if ( (connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen)) < 0)
+        if ( (connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen)) < 0) {
+            if (errno == EINTR)
+                continue;
             err_ret("accept error");
+        }
 
         int client_port = ntohs(cliaddr.sin_port);
 

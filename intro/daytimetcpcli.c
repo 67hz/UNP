@@ -18,7 +18,7 @@
 
 int main(int argc, char *argv[])
 {
-    int sockfd, n;
+    int sockfd;
     char recvline[LINE_MAX + 1];
     char sendline[LINE_MAX + 1];
     socklen_t cli_len;
@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in servaddr;
 
     if (argc != 2) {
-        perror("Usage: ./daytimetcpcli <IPaddress>");
+        perror("Usage: ./daytimetcpcli <server IPaddress>");
         exit(EXIT_FAILURE);
     }
 
@@ -62,11 +62,20 @@ int main(int argc, char *argv[])
 
     /* write STDIN to server, block*/
     while (fgets(sendline, LINE_MAX, stdin) != NULL) {
-        Writen(sockfd, sendline, strlen(sendline));
+        Writen(sockfd, sendline, 1); /* get RST */
+        sleep(1);
 
+
+        Writen(sockfd, sendline+1, strlen(sendline) - 1); /* gen SIGPIPE */
+#if 0
+        Writen(sockfd, sendline, strlen(sendline)); /* gen SIGPIPE */
+
+#endif
         /* read back, readline null terminates */
-        if (readline(sockfd, recvline, LINE_MAX) == 0)
-            err_sys("readline error");
+        if (readline(sockfd, recvline, LINE_MAX) == 0) {
+            printf("server terminated prematurely...\n");
+            err_sys("server terminated prematurely");
+        }
 
         fputs(recvline, stdout);
     }
