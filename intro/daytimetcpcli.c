@@ -1,16 +1,5 @@
 /* simple tcp client */
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <limits.h>
-#include <stdlib.h>
 #include "unp.h"
 
 #define SA                   const struct sockaddr
@@ -62,15 +51,15 @@ int main(int argc, char *argv[])
 
     /* write STDIN to server, block*/
     while (fgets(sendline, LINE_MAX, stdin) != NULL) {
+#if 0
         Writen(sockfd, sendline, 1); /* get RST */
         sleep(1);
 
 
         Writen(sockfd, sendline+1, strlen(sendline) - 1); /* gen SIGPIPE */
-#if 0
+#endif
         Writen(sockfd, sendline, strlen(sendline)); /* gen SIGPIPE */
 
-#endif
         /* read back, readline null terminates */
         if (readline(sockfd, recvline, LINE_MAX) == 0) {
             printf("server terminated prematurely...\n");
