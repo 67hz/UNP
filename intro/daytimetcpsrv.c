@@ -59,6 +59,8 @@ int main(int argc, char *argv[])
 
     if (sigaction(SIGCHLD, &sa, NULL) == -1)
         err_sys("signal error");
+    if (sigaction(SIGPIPE, &sa, NULL) == -1)
+        err_sys("signal error");
 
     for (;;) {
         clilen = sizeof(cliaddr);

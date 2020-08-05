@@ -51,14 +51,14 @@ int main(int argc, char *argv[])
 
     /* write STDIN to server, block*/
     while (fgets(sendline, LINE_MAX, stdin) != NULL) {
-#if 0
+
+#ifdef MULTIWRITE
         Writen(sockfd, sendline, 1); /* get RST */
         sleep(1);
-
-
         Writen(sockfd, sendline+1, strlen(sendline) - 1); /* gen SIGPIPE */
-#endif
+#else
         Writen(sockfd, sendline, strlen(sendline)); /* gen SIGPIPE */
+#endif
 
         /* read back, readline null terminates */
         if (readline(sockfd, recvline, LINE_MAX) == 0) {
