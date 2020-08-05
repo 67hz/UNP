@@ -1,7 +1,7 @@
 /* IPv4 server */
 #include "unp.h"
 
-void
+static void
 sig_child(int signo)
 {
     pid_t pid;
@@ -58,8 +58,6 @@ int main(int argc, char *argv[])
 #endif
 
     if (sigaction(SIGCHLD, &sa, NULL) == -1)
-        err_sys("signal error");
-    if (sigaction(SIGPIPE, &sa, NULL) == -1)
         err_sys("signal error");
 
     for (;;) {

@@ -4,6 +4,17 @@
 
 #define SA                   const struct sockaddr
 
+static void
+sig_pipe(int signo)
+{
+    pid_t pid;
+    int stat;
+
+    pid = getpid();
+    printf("%d terminated with [%s]\n", pid, sys_siglist[signo]);
+    return;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -11,6 +22,7 @@ int main(int argc, char *argv[])
     char recvline[LINE_MAX + 1];
     char sendline[LINE_MAX + 1];
     socklen_t cli_len;
+    struct sigaction sa;
     struct sockaddr cliaddr;
     struct sockaddr_in servaddr;
 
@@ -34,6 +46,13 @@ int main(int argc, char *argv[])
         fprintf(stderr, "inet_pton error for %s", argv[1]);
         exit(EXIT_FAILURE);
     }
+
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags |= SA_INTERRUPT;
+    sa.sa_handler = sig_pipe;
+
+    if (sigaction(SIGPIPE, &sa, NULL) == -1)
+        err_sys("signal error");
 
     if (connect (sockfd, (SA*) &servaddr, sizeof(servaddr)) < 0) {
         perror("connect error");
