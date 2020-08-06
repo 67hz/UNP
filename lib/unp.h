@@ -53,4 +53,11 @@ int Sockfd_to_family(int sockfd);
 /* comms */
 void str_echo (int sockfd);
 
+
+#define MAX(a,b) \
+    ({ __typeof__(a) _a = (a); \
+        __typeof__(b) _b = (b); \
+        _a > _b ? _a : _b; })
+
+
 #endif /* unp.h */
