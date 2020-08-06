@@ -18,14 +18,17 @@ sig_pipe(int signo)
 static void
 str_cli(FILE *fp, int sockfd)
 {
-    int maxfdpl;
+    int maxfdpl, stdin_eof;
     fd_set rset;
     char recvline[LINE_MAX + 1], sendline[LINE_MAX + 1];
 
+    stdin_eof = 0;
     FD_ZERO(&rset);
 
     for (;;) {
-        FD_SET(fileno(fp), &rset);
+        if (stdin_eof == 0)
+            FD_SET(fileno(fp), &rset); /* add stdin to read set */
+
         FD_SET(sockfd, &rset);
         maxfdpl = MAX(fileno(fp), sockfd) + 1;
 
@@ -33,24 +36,34 @@ str_cli(FILE *fp, int sockfd)
             err_sys("select");
 
         if (FD_ISSET(sockfd, &rset)) {  /* socket is readable */
-
-            if (readline(sockfd, recvline, LINE_MAX) == 0)
-                err_sys("server terminated prematurely");
+            if (readline(sockfd, recvline, LINE_MAX) == 0) {
+                if (stdin_eof == 1)
+                    return;              /* normal termination */
+                else
+                    err_sys("server terminated prematurely");
+            }
 
             if (fputs(recvline, stdout) == EOF)
                 err_sys("fputs errored");
         }
 
         if (FD_ISSET(fileno(fp), &rset)) { /* stdin is readable */
-            if (fgets(sendline, LINE_MAX, fp) != NULL) {
-#ifdef MULTIWRITE
-                Writen(sockfd, sendline, 1); /* get RST */
-                sleep(3);
-                Writen(sockfd, sendline+1, strlen(sendline) - 1); /* gen SIGPIPE */
-#else
-                Writen(sockfd, sendline, strlen(sendline)); /* gen SIGPIPE */
-#endif
+            if (fgets(sendline, LINE_MAX, fp) == NULL) { /* fgets ret NULL on error or EOF */
+                stdin_eof = 1;
+                if (shutdown(sockfd, SHUT_WR) == -1)  /* send FIN */
+                    err_sys("shutdown");
+                FD_CLR(fileno(fp), &rset);
+
+                continue;
             }
+
+#ifdef MULTIWRITE
+            Writen(sockfd, sendline, 1); /* get RST */
+            sleep(3);
+            Writen(sockfd, sendline+1, strlen(sendline) - 1); /* gen SIGPIPE */
+#else
+            Writen(sockfd, sendline, strlen(sendline)); /* gen SIGPIPE */
+#endif
         }
     }
 }
