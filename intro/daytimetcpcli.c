@@ -15,12 +15,51 @@ sig_pipe(int signo)
     return;
 }
 
+static void
+str_cli(FILE *fp, int sockfd)
+{
+    int maxfdpl;
+    fd_set rset;
+    char recvline[LINE_MAX + 1], sendline[LINE_MAX + 1];
+
+    FD_ZERO(&rset);
+
+    for (;;) {
+        FD_SET(fileno(fp), &rset);
+        FD_SET(sockfd, &rset);
+        maxfdpl = MAX(fileno(fp), sockfd) + 1;
+
+        if (select(maxfdpl, &rset, NULL, NULL, NULL) == -1)
+            err_sys("select");
+
+        if (FD_ISSET(sockfd, &rset)) {  /* socket is readable */
+
+            if (readline(sockfd, recvline, LINE_MAX) == 0)
+                err_sys("server terminated prematurely");
+
+            if (fputs(recvline, stdout) == EOF)
+                err_sys("fputs errored");
+        }
+
+        if (FD_ISSET(fileno(fp), &rset)) { /* stdin is readable */
+            if (fgets(sendline, LINE_MAX, fp) != NULL) {
+#ifdef MULTIWRITE
+                Writen(sockfd, sendline, 1); /* get RST */
+                sleep(3);
+                Writen(sockfd, sendline+1, strlen(sendline) - 1); /* gen SIGPIPE */
+#else
+                Writen(sockfd, sendline, strlen(sendline)); /* gen SIGPIPE */
+#endif
+            }
+        }
+    }
+}
+
 
 int main(int argc, char *argv[])
 {
     int sockfd;
-    char recvline[LINE_MAX + 1];
-    char sendline[LINE_MAX + 1];
+
     socklen_t cli_len;
     struct sigaction sa;
     struct sockaddr cliaddr;
@@ -59,7 +98,6 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-
     /* @TODO implement sock_ntop */
     char str[INET_ADDRSTRLEN];
     (void) getsockname(sockfd, &cliaddr, &cli_len);
@@ -68,25 +106,7 @@ int main(int argc, char *argv[])
     inet_ntop(AF_INET, &cliaddr, str, sizeof(str));
     printf("inet_ntop %s \n", str);
 
-    /* write STDIN to server, block*/
-    while (fgets(sendline, LINE_MAX, stdin) != NULL) {
-
-#ifdef MULTIWRITE
-        Writen(sockfd, sendline, 1); /* get RST */
-        sleep(1);
-        Writen(sockfd, sendline+1, strlen(sendline) - 1); /* gen SIGPIPE */
-#else
-        Writen(sockfd, sendline, strlen(sendline)); /* gen SIGPIPE */
-#endif
-
-        /* read back, readline null terminates */
-        if (readline(sockfd, recvline, LINE_MAX) == 0) {
-            printf("server terminated prematurely...\n");
-            err_sys("server terminated prematurely");
-        }
-
-        fputs(recvline, stdout);
-    }
+    str_cli(stdin, sockfd);
 
     exit(EXIT_SUCCESS);
 }
