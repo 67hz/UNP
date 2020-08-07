@@ -1,5 +1,6 @@
 /* IPv4 server */
 #include "unp.h"
+#include <sys/select.h>
 
 static void
 sig_child(int signo)
@@ -16,96 +17,96 @@ sig_child(int signo)
 int main(int argc, char *argv[])
 {
 
-    int listenfd, connfd;
+    int index, max_client_in_use_index, maxfd, listenfd, connfd, sockfd, nready;
+    int client[FD_SETSIZE];
     pid_t childpid;
     socklen_t clilen;
     ssize_t nread;
+    fd_set allset, readset;
     struct sockaddr_in servaddr, cliaddr;
-    struct sigaction sa;
-    char buf[LINE_MAX];
-    char chat_buf[LINE_MAX];
-
-    time_t ticks;
-    ssize_t ret;
+    char line_buf[LINE_MAX];
 
     if ( (listenfd = Socket(AF_INET, SOCK_STREAM, 0)) == -1)
         exit(EXIT_FAILURE);
 
     memset (&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);   /* host to network long */
-    servaddr.sin_port = htons(SERV_PORT);  /* host to network short - dayime server */
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(SERV_PORT);
 
-    if (bind (listenfd,
-                (const struct sockaddr *) &servaddr, sizeof(servaddr)) == -1) {
-        perror("bind");
-        exit(EXIT_FAILURE);
-    }
 
-    /* backlog set to 20 */
-    listen(listenfd, 20);
+    if (bind(listenfd, (const struct sockaddr *) &servaddr,
+                sizeof(servaddr)) == -1)
+        err_sys("bind");
 
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sa.sa_flags |= SA_RESTART;
-    sa.sa_handler = sig_child;
+    listen(listenfd, LISTENQ);
 
-#if 0
-    /* catch SIGCHILD (child terminated) to avoid zombie children */
-    /* old, obsoleted, undefined way */
-    if (signal(SIGCHLD, sig_child) == SIG_ERR)
-        err_sys("signal error");
-#endif
+    maxfd = listenfd;
+    max_client_in_use_index = -1;
 
-    if (sigaction(SIGCHLD, &sa, NULL) == -1)
-        err_sys("signal error");
+    for (index = 0; index < FD_SETSIZE; index++)
+        client[index] = -1;         /* -1 -> available entry */
+
+    FD_ZERO(&allset);
+    FD_SET(listenfd, &allset);
 
     for (;;) {
-        clilen = sizeof(cliaddr);
+        readset = allset;
+        if ( (nready = select(maxfd + 1, &readset, NULL, NULL, NULL)) == -1)
+            err_sys("select");
 
-        if ( (connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen)) < 0) {
-            if (errno == EINTR)
-                continue;
-            err_ret("accept error");
-        }
+        if (FD_ISSET(listenfd, &readset)) {                /* new client conn */
+            clilen = sizeof(cliaddr);
 
-        int client_port = ntohs(cliaddr.sin_port);
+            if ( (connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen)) == -1)
+                err_sys("accept");
 
-/* CHILD */
-        if ( (childpid = fork()) == 0) {
-            if (close(listenfd) == -1)        /* close listener in child */
-                err_sys("child close error");
-
-            /*printf("Family: %d\n", Sockfd_to_family(listenfd));*/
-            printf("%s, port %d has entered the room\n",
-                    inet_ntop(AF_INET, &cliaddr.sin_addr, buf, sizeof(buf)),
-                    client_port);
-
-            ticks = time(NULL);
-            snprintf(buf, sizeof(buf), "%.24s\r\n", ctime(&ticks));
-
-            for (;;) {
-                /* blocking until line sent from client*/
-                if ( (nread = readline(connfd, chat_buf, LINE_MAX)) == 0) { /* conn closed by other end */
-                    printf("%d has left @ %s\n", client_port, buf);
+            for (index = 0; index < FD_SETSIZE; index++)
+                if (client[index] < 0) {
+                    client[index] = connfd;
                     break;
                 }
 
-                printf("%s:%d: %s\n", buf, client_port, chat_buf);
+            if (index == FD_SETSIZE)
+                err_sys("too many connections");
 
-                Writen(connfd, chat_buf, nread);
-            }
+            FD_SET(connfd, &allset);        /* add new connfd to set */
+            if (connfd > maxfd)
+                maxfd = connfd;             /* for select */
 
-            exit(EXIT_SUCCESS);         /* exit child process */
+            if (index > max_client_in_use_index)
+                max_client_in_use_index = index;
+
+            if (--nready <= 0)
+                continue;                   /* no more readable descriptors */
+
         }
-/* end CHILD */
 
+        /* check all clients for data */
+        for (index = 0; index <= max_client_in_use_index; index++) {
+            if ( (sockfd = client[index]) < 0)
+                continue;
 
-        if (close(connfd) == -1) {      /* parent closes conn */
-            perror("close connfd");
-            exit(EXIT_FAILURE);
+            if (FD_ISSET(sockfd, &readset)) {
+
+                if ( (nread = readline (sockfd, line_buf, LINE_MAX)) == 0) {
+                    /* conn closed by client */
+                    if (close(sockfd) == -1)
+                        err_sys("close");
+
+                    FD_CLR(sockfd, &allset);
+                    client[index] = -1;
+                } else {
+                    Writen(sockfd, line_buf, strlen(line_buf));
+                }
+
+                if (--nready <= 0)
+                    break;                  /* no more readable descripors */
+
+            }
         }
     }
+
 
     exit(EXIT_SUCCESS);
 
