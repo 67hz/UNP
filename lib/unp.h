@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <sys/select.h>
+#include <sys/poll.h>
 #include <time.h>
 #include <limits.h>
 #include <sys/socket.h>
@@ -28,6 +30,7 @@
 /* Error Handling */
 void err_msg(const char *fmt, ...);
 void err_sys(const char *fmt, ...);
+void err_quit(const char *fmt, ...);
 void err_ret(const char *fmt, ...);
 
 /* IO */
@@ -50,6 +53,9 @@ Listen(int fd, int backlog);
 
 int
 Socket(int family, int type, int protocol);
+
+int
+Accept(int fd, struct sockaddr *sa, socklen_t *salenptr);
 
 int Sockfd_to_family(int sockfd);
 

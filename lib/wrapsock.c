@@ -1,4 +1,5 @@
 #include "unp.h"
+#include <asm-generic/errno.h>
 
 void
 Listen(int fd, int backlog)
@@ -21,4 +22,21 @@ int Socket(int family, int type, int protocol)
         return -1;
     }
     return n;
+}
+
+int Accept(int fd, struct sockaddr *sa, socklen_t *salenptr)
+{
+    int accepted_fd;
+    
+    while ( (accepted_fd = accept(fd, sa, salenptr)) < 0) {
+#ifdef EPROTO
+        if (errno == EPROTO || errno == ECONNABORTED)
+#else
+        if (errno == ECONNABORTED)
+#endif
+            continue;
+        else
+            err_sys("accept error");
+    }
+    return accepted_fd;
 }

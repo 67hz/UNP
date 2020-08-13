@@ -8,6 +8,7 @@
 static
 void err_doit(int loglevel, const char *fmt, va_list ap)
 {
+    /* @TODO add errno flag */
     char buf[LINE_MAX + 1];
     vsnprintf(buf, LINE_MAX, fmt, ap);
 }
@@ -23,6 +24,15 @@ void err_ret(const char *fmt, ...)
     va_start(ap, fmt);
     err_doit(LOG_INFO, fmt, ap);
     return;
+}
+
+void err_quit(const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    err_doit(LOG_ERR, fmt, ap);
+    va_end(ap);
+    exit(EXIT_FAILURE);
 }
 
 /*

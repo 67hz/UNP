@@ -11,5 +11,8 @@ client: daytimetcpcli.o $(OBJECTS)
 server: daytimetcpsrv.o $(OBJECTS)
 	$(LINK.c) $^ $(LOADLIBES) $(LDLIBS) -o $(BIN_DIR)/$@
 
+serverpoll: daytimetcpsrvpoll.o $(OBJECTS)
+	$(LINK.c) $^ $(LOADLIBES) $(LDLIBS) -o $(BIN_DIR)/$@
+
 #daytimetcpcli.o:
 #	$(COMPILE.c) $(OUTPUT_OPTION) $<
