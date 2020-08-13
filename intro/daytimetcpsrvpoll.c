@@ -32,8 +32,11 @@ int main (int argc, char **argv)
     ssize_t n;
     char line[LINE_MAX];
     socklen_t clilen;
-    struct pollfd client[open_max()];
+    int openmax = open_max();
+    struct pollfd client[openmax];
     struct sockaddr_in cliaddr, servaddr;
+
+
 
     listenfd = Socket(AF_INET, SOCK_STREAM, 0);
 
@@ -51,13 +54,14 @@ int main (int argc, char **argv)
     client[0].events = POLLRDNORM;
 
     /* make all clients available */
-    for (i = 1; i <= open_max(); i++) {
+    for (i = 1; i < openmax; i++) {
         client[i].fd = -1;  /* -1 <- available entry */
     }
 
     max_client_index = 0;   /* max index into client array */
 
     for (;;) {
+        printf("\nfor.. %d\n", i);
         if ( (nready = poll(client, max_client_index + 1, -1)) < 0)
             err_sys("poll");
 
@@ -66,14 +70,13 @@ int main (int argc, char **argv)
             connfd = Accept(listenfd, (struct sockaddr *) &cliaddr, &clilen);
 
 
-            for (i = 1; i < open_max(); i++) {
+            for (i = 1; i < openmax; i++)
                 if (client[i].fd < 0) {     /* fill 1st available fd */
                     client[i].fd = connfd;
                     break;
                 }
-            }
 
-            if (i == max_client_index)
+            if (i == openmax)
                 err_quit("too many clients");
 
 
@@ -104,7 +107,9 @@ int main (int argc, char **argv)
                 } else if (n == 0) {                /* conn closed by client */
                     if (close(sockfd) == -1)
                         err_sys("close error");
+
                     printf("conn closed");
+
                     client[i].fd = -1;
                 } else {
                     Writen(sockfd, line, n);
